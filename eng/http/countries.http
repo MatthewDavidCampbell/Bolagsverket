@@ -1,0 +1,20 @@
+### Countries (brief, user stories 1 and 2). Runs in IntelliJ or VS Code REST Client.
+@baseUrl = http://localhost:8080
+
+### First page, sorted by name
+GET {{baseUrl}}/api/countries
+
+### Europe, most populous first, five per page
+GET {{baseUrl}}/api/countries?region=europe&sort=population&direction=desc&page=0&size=5
+
+### Second page of ten
+GET {{baseUrl}}/api/countries?page=1&size=10
+
+### Invalid page size: 400 problem detail
+GET {{baseUrl}}/api/countries?size=0
+
+### One country
+GET {{baseUrl}}/api/countries/SWE
+
+### Unknown country: 404 problem detail
+GET {{baseUrl}}/api/countries/XYZ

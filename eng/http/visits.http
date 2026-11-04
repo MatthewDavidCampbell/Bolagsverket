@@ -1,0 +1,50 @@
+### Visits (brief, user story 3). Every call carries X-User-Id. Run top to bottom.
+@baseUrl = http://localhost:8080
+@user = alice
+
+### Mark Sweden as visited: 201 with Location
+POST {{baseUrl}}/api/visits
+X-User-Id: {{user}}
+Content-Type: application/json
+
+{"countryCode": "SWE", "note": "Midsummer in Dalarna"}
+
+### Mark it again: 409
+POST {{baseUrl}}/api/visits
+X-User-Id: {{user}}
+Content-Type: application/json
+
+{"countryCode": "SWE"}
+
+### Unknown country: 400
+POST {{baseUrl}}/api/visits
+X-User-Id: {{user}}
+Content-Type: application/json
+
+{"countryCode": "XYZ"}
+
+### My visits, with country names and notes
+GET {{baseUrl}}/api/visits
+X-User-Id: {{user}}
+
+### One visit
+GET {{baseUrl}}/api/visits/SWE
+X-User-Id: {{user}}
+
+### Change the note
+PUT {{baseUrl}}/api/visits/SWE
+X-User-Id: {{user}}
+Content-Type: application/json
+
+{"note": "Fika in Uppsala"}
+
+### Unmark: 204
+DELETE {{baseUrl}}/api/visits/SWE
+X-User-Id: {{user}}
+
+### Unmark again: 404
+DELETE {{baseUrl}}/api/visits/SWE
+X-User-Id: {{user}}
+
+### Missing X-User-Id: 400
+GET {{baseUrl}}/api/visits

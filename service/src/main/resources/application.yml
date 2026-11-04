@@ -1,0 +1,34 @@
+spring:
+  application:
+    name: countries-api
+  threads:
+    virtual:
+      enabled: true
+
+server:
+  port: 8080
+
+countries:
+  base-uri: https://api.restcountries.com/countries/v5
+  # Empty means no live import: the bundled snapshot is used instead.
+  api-key: ${RESTCOUNTRIES_API_KEY:}
+  page-size: 100
+
+visits:
+  # Only in-process exists; a remote visits service would be selected here.
+  backend: in-process
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: method

@@ -1,0 +1,10 @@
+# Used by service/Dockerfile (build context: repository root). Send only what the build needs.
+*
+!mvnw
+!.mvn
+!pom.xml
+!core
+!countries
+!visits
+!service
+**/target
