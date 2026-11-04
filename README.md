@@ -20,6 +20,9 @@ I gave myself a 4-hour time box, so some things are deliberately left as documen
 points rather than built; see [Design choices](#design-choices) and
 [Known limitations](#known-limitations).
 
+I come from C# and .NET; [Blueprint.md](Blueprint.md) maps every Java, Spring and Maven idea
+used here to its .NET counterpart.
+
 ## Run it
 
 You need **JDK 25**, or only **Docker**. Maven comes with the repository (`mvnw`).
