@@ -7,6 +7,7 @@ import java.net.URI;
 import java.util.ArrayList;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import se.arbetsprov.core.credential.KeyCredential;
 import se.arbetsprov.core.http.HttpRequest;
 import se.arbetsprov.core.http.policy.AuthorizationPolicy;
 import se.arbetsprov.core.http.policy.RetryPolicy;
@@ -43,6 +44,23 @@ class ClientOptionsTests {
         // (the skeletons do nothing observable, so the order is read from the pipeline)
         assertThat(pipeline.policies())
                 .hasExactlyElementsOfTypes(RetryPolicy.class, AuthorizationPolicy.class);
+    }
+
+    @Test
+    void buildPipeline_withCredential_defaultPipelineSendsBearerKey() {
+        // Given client options with a base URI, key "test-key" and a fake transport
+        var transport = FakeHttpClient.returning(200);
+        var options = new ClientOptions()
+                .baseUri(URI.create("https://example.test/"))
+                .credential(new KeyCredential("test-key"))
+                .httpClient(transport);
+
+        // When the default pipeline sends a request
+        options.buildPipeline().send(HttpRequest.get(options.resolve("items")));
+
+        // Then the transport receives "Authorization: Bearer test-key"
+        assertThat(transport.requests()).singleElement()
+                .satisfies(r -> assertThat(r.headers().first("Authorization")).contains("Bearer test-key"));
     }
 
     @Test

@@ -15,10 +15,10 @@ import se.arbetsprov.core.http.HttpResponse;
 import se.arbetsprov.core.testing.FakeHttpClient;
 
 /**
- * User story 3: retry and authorization are documented extension points that pass through.
- * Tested only for what they do today: keep order and leave the request unchanged.
+ * User story 3: retry is a documented extension point that passes through.
+ * Tested only for what it does today: keep order and leave the request unchanged.
  */
-@DisplayName("Skeleton policies")
+@DisplayName("Skeleton retry policy")
 class SkeletonPolicyTests {
 
     private static final HttpRequest REQUEST = HttpRequest.get(URI.create("https://example.test/items"))
@@ -70,19 +70,5 @@ class SkeletonPolicyTests {
         // Then they are exactly EXPONENTIAL_BACKOFF and FIXED_DELAY
         assertThat(RetryStrategy.values())
                 .containsExactly(RetryStrategy.EXPONENTIAL_BACKOFF, RetryStrategy.FIXED_DELAY);
-    }
-
-    @Test
-    void authorizationPolicy_leavesHeadersUnchanged() {
-        // Given a pipeline with AuthorizationPolicy and a request with one header
-        var transport = FakeHttpClient.returning(200);
-        var pipeline = HttpPipeline.builder().policies(new AuthorizationPolicy()).httpClient(transport).build();
-
-        // When the request is sent
-        pipeline.send(REQUEST);
-
-        // Then the transport receives exactly that one header, nothing added or removed
-        assertThat(transport.requests()).singleElement()
-                .satisfies(r -> assertThat(r.headers()).isEqualTo(REQUEST.headers()));
     }
 }

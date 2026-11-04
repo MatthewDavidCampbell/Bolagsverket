@@ -2,6 +2,7 @@ package se.arbetsprov.core.client;
 
 import java.net.URI;
 import java.util.List;
+import se.arbetsprov.core.credential.KeyCredential;
 import se.arbetsprov.core.http.HttpClient;
 import se.arbetsprov.core.http.HttpPipeline;
 import se.arbetsprov.core.http.JdkHttpClient;
@@ -14,13 +15,26 @@ import se.arbetsprov.core.http.policy.RetryStrategy;
  * Settings a service client is built from. Service libraries extend this class with their own
  * settings; the application maps its configuration onto it.
  *
- * <p>Defaults: the JDK transport, and the policies retry then authorization.
+ * <p>Defaults: the JDK transport, and the policies retry then authorization (with the
+ * configured credential, if any).
  */
 public class ClientOptions {
 
     private URI baseUri;
+    private KeyCredential credential;
     private HttpClient httpClient;
     private List<HttpPipelinePolicy> policies;
+
+    /** The API key sent by the default {@link AuthorizationPolicy}; null for none. */
+    public ClientOptions credential(KeyCredential credential) {
+        this.credential = credential;
+        return this;
+    }
+
+    /** The configured credential, or null. */
+    public KeyCredential credential() {
+        return credential;
+    }
 
     /** The address that request paths are resolved against. Required. */
     public ClientOptions baseUri(URI baseUri) {
@@ -63,9 +77,9 @@ public class ClientOptions {
                 .build();
     }
 
-    private static List<HttpPipelinePolicy> defaultPolicies() {
+    private List<HttpPipelinePolicy> defaultPolicies() {
         // Authorization sits inside retry so that each attempt would get a fresh credential.
-        return List.of(new RetryPolicy(RetryStrategy.EXPONENTIAL_BACKOFF), new AuthorizationPolicy());
+        return List.of(new RetryPolicy(RetryStrategy.EXPONENTIAL_BACKOFF), new AuthorizationPolicy(credential));
     }
 
     private URI requireBaseUri() {
