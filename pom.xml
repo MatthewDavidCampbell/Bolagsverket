@@ -15,6 +15,7 @@
     <modules>
         <module>core</module>
         <module>countries</module>
+        <module>visits</module>
     </modules>
 
     <properties>
