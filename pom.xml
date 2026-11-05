@@ -17,6 +17,7 @@
         <module>countries</module>
         <module>visits</module>
         <module>service</module>
+        <module>ai</module>
     </modules>
 
     <properties>

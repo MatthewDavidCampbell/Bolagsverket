@@ -28,6 +28,8 @@ docker run --rm -p 8080:8080 countries-api
 docker run --rm -p 8080:8080 -e RESTCOUNTRIES_API_KEY=<nyckel> countries-api
 ```
 
+**Varning**: Utan **RESTCOUNTRIES_API_KEY** används en lokal [kopia av JSON](./countries/src/main/resources/se/arbetsprov/countries/countries-snapshot.json) data om länder
+
 ## IT-specialist systemutveckling
 I annonsen för IT-specialist systemutveckling efterfrågar Bolagsverket erfarenhet av:
 - CI/CD-pipelines
@@ -62,7 +64,7 @@ Allt ligger i ett monorepo och inte enbart på grund av att utvecklingskontexten
 - smoke test
 - anrop per user story ([eng/http](./eng/http/))
 
-CI ([.github/workflows/ci.yml](./.github/workflows/ci.yml)) bygger, testar, startar tjänsten, kör smoke test och bygger Docker-imagen.  Många fler funktioner skulle kunna finnas tex. gemensam bygglogik med Gradle (trots valet av Maven i detta repo).
+CI ([.github/workflows/ci.yml](./.github/workflows/ci.yml)) bygger, testar, startar tjänsten, kör smoke test och bygger Docker-imagen.  Många fler funktioner skulle kunna finnas tex. gemensam bygglogik med Gradle (trots valet av Maven i detta repo), hemliga nycklar, miljövariabler med mera.
 
 Det finns en skiljelinje mellan *klienter* och *tjänster*.  En *klient* använder HTTP/S mot *tjänstens* REST API.  Därför finns en gemensam [HTTP-pipeline](./core/) där återkommande steg (policyer) med konfigurerbara strategier körs i en bestämd ordning.  Exempel på steg i kontakten med en fjärrtjänst:
 - autentisering/auktorisering
@@ -88,5 +90,42 @@ En HTTP-pipeline innebär att *klienter* kan fokusera på sina krav.  [Landklien
 - `X-User-Id` litas på som den är, ingen riktig autentisering
 - ögonblicksbilden av länder uppdateras manuellt
 
-## Extra
-Det kan läggas till AI-stöd där frågor eller direktiv på naturligt språk omvandlas till REST API-anrop men endast i mån av **extra** tid.  Java har numera AI-stöd (tex. Spring AI) liknande stödet i Python eller C#.
+## AI (bonus)
+Ett exempel på hur ett handskrivet index i FAISS-anda (FLAT) tillsammans med en flerspråkig embedding-modell ([multilingual-e5-small](https://huggingface.co/intfloat/multilingual-e5-small)) kan dirigera en NL (natural language) fråga eller direktiv till ett minimalt LLM med ansvaret att fylla i parametrarna till ett REST API-anrop.  Anropet besvaras av tjänstens controller och JSON-svaret visas i chatten på svenska eller engelska.  Uppsättningen är en extrem förenkling men redovisar hur ett användargränssnitt kan utnyttja AI eller samspela med resurser som en SQL-databas.
+
+[ai](./ai/) är en *klient* precis som länder och besök, dvs. en CLI som anropar den körande [tjänsten](./service/) via [HTTP-pipelinen](./core/).  Tjänsten i Docker är det enda externa.  Flödet:
+- frågan omvandlas till en vektor med multilingual-e5-small (svenska frågor hittar engelska beskrivningar)
+- FLAT-indexet jämför vektorn mot en katalog med 6 operationer skrivna på engelska (tex. *List countries*), var och en med en beskrivning och några korta exempel, och väljer den närmaste
+- under tröskeln 0,80 godtas en träff bara om den tydligt slår näst bästa operation (minst 0,015 före, ned till 0,77), annars blir svaret *Jag förstod inte*
+- ett litet LLM ([qwen2.5:1.5b](https://ollama.com/library/qwen2.5) via [Ollama](https://ollama.com/)) fyller enbart i parametrarna (tex. region och sortering), aldrig adressen
+- anropet byggs från katalogen, värdena kontrolleras och tjänsten anropas
+- svaret visas med fasta mallar på svenska eller engelska (eller rå JSON med `--json`), språket avgörs lokalt utifrån vanliga ord i frågan och inte av LLM:et
+
+FLAT valdes framför IVF_PQ eftersom katalogen är liten.  IVF_PQ behöver tusentals vektorer att träna på och lönar sig först vid miljontals poster, därför finns den enbart dokumenterad.
+
+Två faser, så att det är ett eget val att hämta modeller lokalt:
+```
+eng/scripts/ask.sh --setup
+eng/scripts/ask.sh --user alice
+```
+(Windows: `eng\scripts\ask.ps1`)
+
+`--setup` kontrollerar och frågar `Installera? (Yes/No)` för varje sak som saknas (enbart `Yes`/`yes`/`No`/`no` godtas):
+- modellen `model_quantized.onnx` (118 MB, Xenova) och `tokenizer.json` (17 MB, intfloat), båda MIT, till `~/.cache/arbetsprov/models` med kontroll av SHA-256
+- Ollama via `winget` (Windows) eller `brew` (macOS), på Linux skrivs installationskommandot ut
+- `ollama pull qwen2.5:1.5b` (cirka 1 GB)
+
+`--user` kräver att setup körts, annars avbryts den direkt med en förklaring.  Standardvärden visas med `--help` (tjänst `http://localhost:8080`, språk `sv`).  I chatten byter `/sv` och `/en` språk och `/exit` avslutar:
+```
+(chat) Vad vill du göra?
+(alice) lista de fem största länderna i Europa
+(chat) GET /api/countries?region=Europe&sort=population&direction=desc&size=5
+(chat) 1. Russia – 146 028 325 invånare
+```
+
+Felkoder: 2 felaktiga alternativ, 3 något saknas (kör `--setup`), 4 tjänsten eller Ollama svarar inte.  CI behöver varken modell eller Ollama eftersom testerna använder stubbar och WireMock.
+
+Begränsningar med ett så litet LLM (1,5 miljarder parametrar), uppmätta mot den riktiga tjänsten:
+- antal kan utelämnas (*de tre minsta* ger 20 länder i rätt ordning)
+- landskoder kan bli fel (*Danmark* blev `DEN` i stället för `DNK`, tjänsten svarar då 404 och chatten fortsätter)
+- en anteckning kan hittas på trots att ingen angavs
