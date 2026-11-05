@@ -18,6 +18,15 @@ public final class JsonSerializer {
             .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
             .build();
 
+    /** Writes {@code value} as UTF-8 JSON, for request bodies. */
+    public byte[] serialize(Object value) {
+        try {
+            return mapper.writeValueAsBytes(value);
+        } catch (JacksonException e) {
+            throw new IllegalArgumentException("Could not serialize " + value.getClass().getName() + " to JSON", e);
+        }
+    }
+
     /** Reads a single value; null for an empty body. */
     public <T> T deserialize(byte[] body, Class<T> type) {
         if (body.length == 0) {
